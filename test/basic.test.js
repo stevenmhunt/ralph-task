@@ -67,7 +67,7 @@ const mapping = {
 describe("loadRalphtaskConfig", () => {
   it("loads config from an explicit path and applies defaults", async () => {
     await withTempDir(async (dir) => {
-      const configPath = path.join(dir, "ralph-task.json");
+      const configPath = path.join(dir, ".ralphtask.json");
       const config = {
         paths: {
           prdFile: "prd.json",
@@ -112,7 +112,7 @@ describe("loadRalphtaskConfig", () => {
 
   it("throws a clear error when Trello credentials are missing", async () => {
     await withTempDir(async (dir) => {
-      const configPath = path.join(dir, "ralph-task.json");
+      const configPath = path.join(dir, ".ralphtask.json");
       const config = {
         paths: {
           prdFile: "prd.json",

@@ -26,7 +26,7 @@
     "framework": "TypeScript (Node.js ESM) library + CLI",
     "hosting": "npm registry",
     "database": "Local filesystem state file for incremental sync",
-    "auth": "Trello API key and token provided via ralph-task.json"
+    "auth": "Trello API key and token provided via .ralphtask.json"
   },
   "routes": [
     {
@@ -86,7 +86,7 @@
     }
   ],
   "importFormat": {
-    "description": "ralph-task.json defines the Trello board, PRD file path, ID mapping rules, sync behavior, conflict resolution, and logging. One board is supported per config.",
+    "description": ".ralphtask.json defines the Trello board, PRD file path, ID mapping rules, sync behavior, conflict resolution, and logging. One board is supported per config.",
     "example": {
       "version": 1,
       "paths": {
@@ -132,7 +132,7 @@
   },
   "rules": [
     "Canonical identity: PRD story `id` is the single source of truth and must be extractable from Trello card titles.",
-    "Story ID format: '<prefix>-<number with leading zeros>' (default prefix 'US'), configurable via ralph-task.json.",
+    "Story ID format: '<prefix>-<number with leading zeros>' (default prefix 'US'), configurable via .ralphtask.json.",
     "Card title mapping: Trello card name must be '[<storyId>] <storyTitle>' and is updated to match the winning side.",
     "Description mapping: Trello card description maps exclusively to PRD story `description`.",
     "Status mapping: PRD story status values are limited to 'open', 'in_progress', and 'done' and map to Trello lists by name.",
@@ -170,14 +170,14 @@
     },
     {
       "id": "US-002",
-      "title": "Implement ralph-task.json configuration loader and validation",
+      "title": "Implement .ralphtask.json configuration loader and validation",
       "status": "done",
       "dependsOn": [
         "US-001"
       ],
-      "description": "As a user, I want to configure ralph-task entirely via ralph-task.json so that sync behavior is explicit and reproducible.",
+      "description": "As a user, I want to configure ralph-task entirely via .ralphtask.json so that sync behavior is explicit and reproducible.",
       "acceptanceCriteria": [
-        "Load config from CLI parameter or default to ./ralph-task.json",
+        "Load config from CLI parameter or default to .ralphtask.json",
         "Validate required fields and apply defaults",
         "Example: valid config loads into a strongly-typed object",
         "Negative case: missing Trello credentials produces a clear validation error"

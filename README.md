@@ -16,9 +16,9 @@ npm install ralph-task
 npx ralph-task sync --help
 ```
 
-## Configuration (ralph-task.json)
+## Configuration (.ralphtask.json)
 
-The CLI defaults to `./ralph-task.json`. Use `--config <path>` to override. Paths
+The CLI defaults to `.ralphtask.json`. Use `--config <path>` to override. Paths
 inside the file are resolved relative to the config file location.
 
 Example:
