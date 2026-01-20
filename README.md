@@ -1,7 +1,11 @@
 # ralph-task
 
-Synchronize a Trello board with a Ralph PRD `stories[]` array using a
+Synchronize online task board apps with a PRD file for Ralph loops using a
 deterministic two-way sync engine.
+
+Keep Ralph busy on the go!
+
+![Ralph loop](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcGtiNnY4dWg5YjNjdGYyc2x0OGxyenZ2cnA1Njloa2hmZWp5ZTJyaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieMKYWISkcQsvvy/giphy.gif)
 
 ## Install
 

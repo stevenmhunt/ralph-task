@@ -1,6 +1,6 @@
 {
   "name": "ralph-task",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Synchronize a task board with a PRD file for Ralph loops.",
   "type": "module",
   "license": "MIT",
