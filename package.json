@@ -1,0 +1,37 @@
+{
+  "name": "ralph-task",
+  "version": "0.1.0",
+  "description": "Synchronize a task board with a PRD file for Ralph loops.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Steven Hunt",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ralph-task": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint . --ext .ts",
+    "test": "npm run build && node --test test/basic.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.9",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  }
+}

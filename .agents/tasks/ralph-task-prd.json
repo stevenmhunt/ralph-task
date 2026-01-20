@@ -1,0 +1,448 @@
+{
+  "version": 1,
+  "project": "ralph-task",
+  "overview": "Create a TypeScript (ESM) npm module and CLI to perform deterministic two-way synchronization between a Trello board and a Ralph-loop PRD JSON file, focusing exclusively on syncing the PRD `stories[]` array to Trello cards and back using a canonical story ID.",
+  "goals": [
+    "Two-way sync between Trello cards and Ralph PRD stories using PRD story IDs as the canonical key",
+    "Provide a CLI-first workflow with a reusable library API",
+    "Ensure deterministic, safe synchronization via dry-run, incremental sync, retries, and logging",
+    "Design an extensible adapter architecture to support additional boards and PRD formats in the future"
+  ],
+  "nonGoals": [
+    "Syncing or deriving non-story PRD fields (overview, goals, stack, routes, etc.) from Trello",
+    "Supporting Jira or other task boards in v1",
+    "Implementing field-level merge resolution within a story",
+    "Providing any graphical user interface"
+  ],
+  "successMetrics": [
+    "A single CLI command can synchronize a Trello board and PRD file end-to-end",
+    "Edits to story title, status, description, dependencies, or acceptance criteria round-trip correctly",
+    "Dry-run produces an accurate, side-effect-free change plan",
+    "Incremental sync avoids unnecessary Trello API calls on repeated runs",
+    "Package builds, typechecks, lints, tests, and publishes successfully as an ESM module"
+  ],
+  "openQuestions": [],
+  "stack": {
+    "framework": "TypeScript (Node.js ESM) library + CLI",
+    "hosting": "npm registry",
+    "database": "Local filesystem state file for incremental sync",
+    "auth": "Trello API key and token provided via ralph-task.json"
+  },
+  "routes": [
+    {
+      "path": "N/A",
+      "name": "CLI/Library",
+      "purpose": "All functionality exposed via CLI commands and TypeScript API"
+    }
+  ],
+  "uiNotes": [
+    "CLI output must be readable by humans by default and optionally emitted as JSON for automation",
+    "Dry-run output must clearly separate creates, updates, conflicts, and no-ops"
+  ],
+  "dataModel": [
+    {
+      "entity": "PRDStory",
+      "fields": [
+        "id",
+        "title",
+        "status (open | in_progress | done)",
+        "dependsOn[]",
+        "description",
+        "acceptanceCriteria[]"
+      ]
+    },
+    {
+      "entity": "RalphtaskConfig",
+      "fields": [
+        "version",
+        "paths",
+        "trello",
+        "mapping",
+        "sync",
+        "conflict",
+        "logging"
+      ]
+    },
+    {
+      "entity": "SyncState",
+      "fields": [
+        "lastRunAt",
+        "boardId",
+        "prdPath",
+        "storyIndex",
+        "cardIndex",
+        "lastSeenTrelloActivity"
+      ]
+    },
+    {
+      "entity": "SyncPlan",
+      "fields": [
+        "creates[]",
+        "updates[]",
+        "conflicts[]",
+        "noop[]",
+        "errors[]"
+      ]
+    }
+  ],
+  "importFormat": {
+    "description": "ralph-task.json defines the Trello board, PRD file path, ID mapping rules, sync behavior, conflict resolution, and logging. One board is supported per config.",
+    "example": {
+      "version": 1,
+      "paths": {
+        "prdFile": ".agents/tasks/prd-example.json",
+        "stateFile": ".ralph-task/state.json"
+      },
+      "trello": {
+        "apiKey": "YOUR_KEY",
+        "token": "YOUR_TOKEN",
+        "boardId": "YOUR_BOARD_ID"
+      },
+      "mapping": {
+        "storyPrefix": "US",
+        "idPattern": "{prefix}-{number:3}",
+        "cardTitleFormat": "[{id}] {title}",
+        "dependsOnLabelPrefix": "s:",
+        "statusToList": {
+          "open": "To Do",
+          "in_progress": "In Progress",
+          "done": "Done"
+        },
+        "acceptanceCriteriaChecklistName": "Acceptance Criteria"
+      },
+      "sync": {
+        "direction": "two-way",
+        "incremental": true,
+        "dryRun": false,
+        "maxConcurrency": 4,
+        "retry": {
+          "maxRetries": 5,
+          "baseDelayMs": 500
+        }
+      },
+      "conflict": {
+        "strategy": "last-write-wins",
+        "defaultPrefer": "none"
+      },
+      "logging": {
+        "level": "info",
+        "format": "text"
+      }
+    }
+  },
+  "rules": [
+    "Canonical identity: PRD story `id` is the single source of truth and must be extractable from Trello card titles.",
+    "Story ID format: '<prefix>-<number with leading zeros>' (default prefix 'US'), configurable via ralph-task.json.",
+    "Card title mapping: Trello card name must be '[<storyId>] <storyTitle>' and is updated to match the winning side.",
+    "Description mapping: Trello card description maps exclusively to PRD story `description`.",
+    "Status mapping: PRD story status values are limited to 'open', 'in_progress', and 'done' and map to Trello lists by name.",
+    "Acceptance criteria mapping: PRD `acceptanceCriteria[]` maps to a Trello checklist named 'Acceptance Criteria'; checklist items reflect criteria text and completion state.",
+    "Completion behavior: When a story status is 'done', all acceptance-criteria checklist items must be checked.",
+    "Dependency mapping: PRD story `dependsOn[]` maps to Trello labels using prefix 's:<storyId>'. Labels persist relationships only.",
+    "Conflict resolution: Merging is performed at the story level only. Default is last-write-wins using Trello activity timestamps vs PRD file modification time.",
+    "Sync hint: CLI flag '--prefer <trello|prd>' can bias last-write-wins resolution for a given run.",
+    "Incremental sync: A local state file is used to avoid full rescans; missing or invalid state triggers full reconciliation.",
+    "Extensibility: Trello and Ralph PRD integrations must be implemented behind adapter interfaces to allow future targets and formats."
+  ],
+  "qualityGates": [
+    "npm test",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Scaffold TypeScript ESM project with standard quality gates",
+      "status": "done",
+      "dependsOn": [],
+      "description": "As a maintainer, I want a clean TypeScript ESM project scaffold so that development and CI are deterministic.",
+      "acceptanceCriteria": [
+        "Create package.json with ESM enabled and Node-compatible entrypoints",
+        "Add TypeScript build configuration emitting ESM to dist/",
+        "Add scripts for test, lint, typecheck, and build",
+        "Example: `npm run build` produces importable ESM output",
+        "Negative case: introducing a type error causes `npm run typecheck` to fail"
+      ],
+      "startedAt": "2026-01-20T16:32:29.966037+00:00",
+      "completedAt": "2026-01-20T16:43:00.250003+00:00",
+      "updatedAt": "2026-01-20T16:43:00.249992+00:00"
+    },
+    {
+      "id": "US-002",
+      "title": "Implement ralph-task.json configuration loader and validation",
+      "status": "done",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a user, I want to configure ralph-task entirely via ralph-task.json so that sync behavior is explicit and reproducible.",
+      "acceptanceCriteria": [
+        "Load config from CLI parameter or default to ./ralph-task.json",
+        "Validate required fields and apply defaults",
+        "Example: valid config loads into a strongly-typed object",
+        "Negative case: missing Trello credentials produces a clear validation error"
+      ],
+      "startedAt": "2026-01-20T16:43:02.290128+00:00",
+      "completedAt": "2026-01-20T16:54:22.689624+00:00",
+      "updatedAt": "2026-01-20T16:54:22.689615+00:00"
+    },
+    {
+      "id": "US-003",
+      "title": "Define board and format adapter interfaces",
+      "status": "done",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a maintainer, I want stable adapter interfaces so future boards and PRD formats can be added safely.",
+      "acceptanceCriteria": [
+        "Define BoardAdapter interface for lists, cards, labels, checklists, and activity timestamps",
+        "Define FormatAdapter interface for reading and writing PRD stories",
+        "Example: mock adapters can be injected into the sync engine for tests",
+        "Negative case: missing adapter methods cause compile-time errors"
+      ],
+      "startedAt": "2026-01-20T16:54:24.759212+00:00",
+      "completedAt": "2026-01-20T17:01:39.118118+00:00",
+      "updatedAt": "2026-01-20T17:01:39.118109+00:00"
+    },
+    {
+      "id": "US-004",
+      "title": "Implement Ralph PRD format adapter (stories only)",
+      "status": "done",
+      "dependsOn": [
+        "US-003",
+        "US-002"
+      ],
+      "description": "As a user, I want ralph-task to read and write PRD stories without corrupting other PRD fields.",
+      "acceptanceCriteria": [
+        "Read PRD JSON and parse `stories[]` into typed objects",
+        "Write updated stories back while preserving all other fields",
+        "Example: new Trello card produces a new PRD story entry",
+        "Negative case: invalid PRD JSON aborts sync without Trello writes"
+      ],
+      "startedAt": "2026-01-20T17:01:41.188014+00:00",
+      "completedAt": "2026-01-20T17:13:12.983141+00:00",
+      "updatedAt": "2026-01-20T17:13:12.983131+00:00"
+    },
+    {
+      "id": "US-005",
+      "title": "Implement Trello adapter for cards, lists, labels, and checklists",
+      "status": "done",
+      "dependsOn": [
+        "US-003",
+        "US-002"
+      ],
+      "description": "As a user, I want ralph-task to interact with Trello so stories can be synchronized reliably.",
+      "acceptanceCriteria": [
+        "Fetch lists and map them to PRD statuses",
+        "Create and update cards with canonical titles and descriptions",
+        "Create and manage 'Acceptance Criteria' checklist",
+        "Example: PRD story creates or updates a matching Trello card",
+        "Negative case: invalid Trello token fails fast with no PRD writes"
+      ],
+      "startedAt": "2026-01-20T17:13:15.053033+00:00",
+      "completedAt": "2026-01-20T17:23:57.392587+00:00",
+      "updatedAt": "2026-01-20T17:23:57.392577+00:00"
+    },
+    {
+      "id": "US-006",
+      "title": "Implement story ID parsing and formatting",
+      "status": "done",
+      "dependsOn": [
+        "US-002",
+        "US-004",
+        "US-005"
+      ],
+      "description": "As a user, I want canonical, configurable story IDs so cards and stories map deterministically.",
+      "acceptanceCriteria": [
+        "Parse IDs from '[<id>] <title>' card titles",
+        "Support configurable prefix and zero-padding",
+        "Example: '[US-007] Title' maps to story ID 'US-007'",
+        "Negative case: ambiguous or missing IDs are reported and skipped"
+      ],
+      "startedAt": "2026-01-20T17:44:58.446082+00:00",
+      "completedAt": "2026-01-20T17:54:43.866117+00:00",
+      "updatedAt": "2026-01-20T17:54:43.866107+00:00"
+    },
+    {
+      "id": "US-007",
+      "title": "Build deterministic two-way sync engine",
+      "status": "done",
+      "dependsOn": [
+        "US-004",
+        "US-005",
+        "US-006"
+      ],
+      "description": "As a user, I want a deterministic engine that converges Trello and PRD stories based on defined rules.",
+      "acceptanceCriteria": [
+        "Generate a sync plan classifying creates, updates, conflicts, and no-ops",
+        "Apply mapping rules for title, description, status, dependencies, and acceptance criteria",
+        "Example: PRD edit updates Trello card on next run",
+        "Negative case: duplicate story IDs across cards result in a conflict"
+      ],
+      "startedAt": "2026-01-20T17:54:45.936587+00:00",
+      "completedAt": "2026-01-20T18:17:55.587593+00:00",
+      "updatedAt": "2026-01-20T18:17:55.587583+00:00"
+    },
+    {
+      "id": "US-008",
+      "title": "Implement conflict resolution with last-write-wins and CLI hints",
+      "status": "done",
+      "dependsOn": [
+        "US-007"
+      ],
+      "description": "As a user, I want predictable conflict resolution with optional CLI bias.",
+      "acceptanceCriteria": [
+        "Default to last-write-wins at the story level",
+        "Support '--prefer trello' and '--prefer prd' CLI hints",
+        "Example: '--prefer prd' resolves equal-timestamp conflicts in favor of PRD",
+        "Negative case: unresolved conflicts are reported and block writes if configured"
+      ],
+      "startedAt": "2026-01-20T18:17:57.657894+00:00",
+      "completedAt": "2026-01-20T18:29:51.978149+00:00",
+      "updatedAt": "2026-01-20T18:29:51.978139+00:00"
+    },
+    {
+      "id": "US-009",
+      "title": "Add incremental sync state file",
+      "status": "done",
+      "dependsOn": [
+        "US-007"
+      ],
+      "description": "As a user, I want incremental sync to minimize Trello API usage.",
+      "acceptanceCriteria": [
+        "Persist sync state to a local file",
+        "Skip unchanged stories and cards on subsequent runs",
+        "Example: second run with no changes produces only no-ops",
+        "Negative case: corrupted state triggers full resync with warning"
+      ],
+      "startedAt": "2026-01-20T18:29:54.017730+00:00",
+      "completedAt": "2026-01-20T18:53:22.442389+00:00",
+      "updatedAt": "2026-01-20T18:53:22.442379+00:00"
+    },
+    {
+      "id": "US-010",
+      "title": "Implement dry-run mode with detailed output",
+      "status": "done",
+      "dependsOn": [
+        "US-007"
+      ],
+      "description": "As a user, I want to preview sync actions without making changes.",
+      "acceptanceCriteria": [
+        "Dry-run produces a full sync plan without writes",
+        "Output clearly lists planned changes",
+        "Example: dry-run shows list moves and checklist updates",
+        "Negative case: no Trello or PRD writes occur in dry-run"
+      ],
+      "startedAt": "2026-01-20T18:53:24.512651+00:00",
+      "completedAt": "2026-01-20T19:07:06.703946+00:00",
+      "updatedAt": "2026-01-20T19:07:06.703933+00:00"
+    },
+    {
+      "id": "US-011",
+      "title": "Add retry, backoff, and rate-limit handling",
+      "status": "done",
+      "dependsOn": [
+        "US-005"
+      ],
+      "description": "As a user, I want resilient Trello API handling.",
+      "acceptanceCriteria": [
+        "Retry transient failures with exponential backoff",
+        "Respect configured retry limits",
+        "Example: temporary 429 resolves without user action",
+        "Negative case: repeated failures exit with clear error"
+      ],
+      "startedAt": "2026-01-20T19:07:08.773615+00:00",
+      "completedAt": "2026-01-20T19:17:04.171313+00:00",
+      "updatedAt": "2026-01-20T19:17:04.171303+00:00"
+    },
+    {
+      "id": "US-012",
+      "title": "Add structured logging with levels and formats",
+      "status": "done",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a user, I want configurable logging for local use and CI.",
+      "acceptanceCriteria": [
+        "Support log levels and text/JSON formats",
+        "Example: debug logs show per-story decisions",
+        "Negative case: silent mode suppresses non-fatal output"
+      ],
+      "startedAt": "2026-01-20T19:17:06.241980+00:00",
+      "completedAt": "2026-01-20T19:32:41.948603+00:00",
+      "updatedAt": "2026-01-20T19:32:41.948593+00:00"
+    },
+    {
+      "id": "US-013",
+      "title": "Implement CLI interface",
+      "status": "done",
+      "dependsOn": [
+        "US-002",
+        "US-007"
+      ],
+      "description": "As a user, I want a CLI-first interface for ralph-task.",
+      "acceptanceCriteria": [
+        "Provide `ralph-task sync` command",
+        "Support --config and --prefer flags",
+        "Example: `ralph-task sync --prefer trello` completes successfully",
+        "Negative case: missing config exits with error"
+      ],
+      "startedAt": "2026-01-20T19:52:37.364569+00:00",
+      "completedAt": "2026-01-20T20:05:36.019556+00:00",
+      "updatedAt": "2026-01-20T20:05:36.019546+00:00"
+    },
+    {
+      "id": "US-014",
+      "title": "Add core unit tests for sync logic",
+      "status": "done",
+      "dependsOn": [
+        "US-006",
+        "US-007",
+        "US-008"
+      ],
+      "description": "As a maintainer, I want strong unit coverage for critical logic.",
+      "acceptanceCriteria": [
+        "Test ID parsing, mappings, and conflict resolution",
+        "Example: test verifies last-write-wins behavior",
+        "Negative case: duplicate IDs produce conflicts"
+      ],
+      "startedAt": "2026-01-20T20:05:38.089437+00:00",
+      "completedAt": "2026-01-20T20:14:50.153543+00:00",
+      "updatedAt": "2026-01-20T20:14:50.153532+00:00"
+    },
+    {
+      "id": "US-015",
+      "title": "Document usage and extension points",
+      "status": "done",
+      "dependsOn": [
+        "US-013"
+      ],
+      "description": "As a user, I want clear documentation for usage and extension.",
+      "acceptanceCriteria": [
+        "README documents install, config, and sync workflow",
+        "Document adapter interfaces for future extensions",
+        "Negative case: explicitly document non-goals to avoid confusion"
+      ],
+      "startedAt": "2026-01-20T20:14:52.223174+00:00",
+      "completedAt": "2026-01-20T20:18:56.646488+00:00",
+      "updatedAt": "2026-01-20T20:18:56.646477+00:00"
+    },
+    {
+      "id": "US-016",
+      "title": "Automatically create missing labels in Trello board",
+      "status": "done",
+      "dependsOn": [
+        "US-005"
+      ],
+      "description": "As a user, when I initially import my PRD into Trello, I would like the sync engine to automatically create any missing labels so that I don’t need to send time manually adding labels in Trello. There should be a configuration option called conflict.createMissingLabels which defaults to true, and if that value is true then the labels should be created automatically. Otherwise, maintain the existing behavior.",
+      "acceptanceCriteria": [
+        "When a label already exists, then that label is used by the sync engine.",
+        "When a label does not exist and conflict.createMissingLabels is set to true, then create the label and proceed normally.",
+        "When a label does not exist and conflict.createMissingLabels is set to false, then do not create a label and instead return a conflict."
+      ],
+      "startedAt": "2026-01-20T21:23:01.201083+00:00",
+      "completedAt": "2026-01-20T21:44:46.092422+00:00",
+      "updatedAt": "2026-01-20T21:44:46.092411+00:00"
+    }
+  ]
+}
